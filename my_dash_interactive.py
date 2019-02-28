@@ -2,9 +2,11 @@ import json
 from textwrap import dedent as d
 import plotly.graph_objs as go
 import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import pandas as pd
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -17,25 +19,31 @@ styles = {
     }
 }
 
-dataList1 = [
+cities=['Haryana', 'Delhi', 'Mumbai', 'Bangalore', 'Kerela', 'Chennai']
+maleLiteracy=[60, 90, 85, 95, 100, 98]
+femaleLiteracy=[30, 40, 55, 55, 60, 20]
+
+df = pd.DataFrame({"cities":cities, "maleLiteracyRate":maleLiteracy, "femaleLiteracyRate":femaleLiteracy})
+
+scatter_data = [
                     {
-                        'x': [1, 2, 3, 4],
-                        'y': [4, 1, 3, 5],
+                        'x': cities,
+                        'y': femaleLiteracy,
                         'text': ['a', 'b', 'c', 'd'],
                         'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-                        'name': 'Trace 1',
+                        'name': 'Male literacy rate',
                         'mode': 'lines+markers',
                         'marker': {'size': 5}
                     }
                 ]
 
-dataList2 = [
+bar_data = [
                     {
-                        'x': [5, 6, 7, 8],
-                        'y': [8, 3, 7, 3],
+                        'x': cities,
+                        'y': femaleLiteracy,
                         'text': ['a', 'b', 'c', 'd'],
                         'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-                        'name': 'Trace 1',
+                        'name': 'Female Literacy rate',
                         'mode': 'lines+markers',
                         'type': 'bar',
                         'marker': {'size': 8, 'color':'green'}
@@ -44,37 +52,82 @@ dataList2 = [
 
 app.layout = html.Div([
         html.Div([
+        dash_table.DataTable(
+            id='table',
+            columns=[{"name": i, "id": i} for i in df.columns],
+            data=df.to_dict("rows"),
+        )
+    ], style={'width': '40%', 'display': 'inline-block', 'font-size':'20px'}),
+    html.Div([
+            dcc.Dropdown(
+                id='select_literacy',
+                options=[{'label': 'Male Literacy rate', 'value': 'male'}, {'label': 'Female Literacy rate', 'value': 'female'}],
+                value='male'
+            )
+        ], style={'width': '49%', 'display': 'inline-block', 'padding-left':'10px'}),
+        html.Div([
         dcc.Graph(
-            id='basic-interactions',
+            id='scatter_chart',
             figure={
-                'data': dataList1,
+                'data': scatter_data,
                 'layout': {
                     'clickmode': 'event+select'
                 },
             },
             hoverData={'points': [{'customdata': 'c.a'}]}
         )
-    ]),
+    ], style={'width': '49%', 'display': 'inline-block'}),
     html.Div([
             dcc.Graph(
-                id='basic-interactions2',
+                id='bar_chart',
                 figure={
-                    'data': dataList2,
+                    'data': bar_data,
                     'layout': {
                         'clickmode': 'event+select'
                     }
                 }
             )
-        ])
-        
-        ])
-            
+        ], style={'width': '49%', 'display': 'inline-block'})
+    ])
+
 @app.callback(
-    dash.dependencies.Output('basic-interactions2', 'figure'),
-    [dash.dependencies.Input('basic-interactions', 'hoverData')])
-def update_data(hoverData):
-    custom_x = hoverData['points'][0]['customdata']
-    return create_time_series(custom_x)
+    dash.dependencies.Output('scatter_chart', 'figure'),
+    [dash.dependencies.Input('select_literacy', 'value')])
+def update_chart1(value):
+    scatter_data[0]['y'] = femaleLiteracy
+    if value=='male':
+        scatter_data[0]['y'] = maleLiteracy
+
+    data_dict = {
+                'data': scatter_data,
+                'layout': {
+                    'clickmode': 'event+select'
+                    }
+                }
+    return data_dict
+
+@app.callback(
+    dash.dependencies.Output('bar_chart', 'figure'),
+    [dash.dependencies.Input('select_literacy', 'value')])
+def update_chart2(value):
+    bar_data[0]['y'] = femaleLiteracy
+    if value=='male':
+        bar_data[0]['y'] = maleLiteracy
+
+    data_dict = {
+                'data': bar_data,
+                'layout': {
+                    'clickmode': 'event+select'
+                    }
+                }
+    return data_dict
+            
+#@app.callback(
+#    dash.dependencies.Output('basic-interactions2', 'figure'),
+#    [dash.dependencies.Input('basic-interactions', 'hoverData')])
+#def update_data(hoverData):
+#    custom_x = hoverData['points'][0]['customdata']
+#    return create_time_series(custom_x)
 
 def create_time_series(custom_x):
     if custom_x == 'c.a':
